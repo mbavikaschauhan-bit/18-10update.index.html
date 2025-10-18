@@ -2406,8 +2406,8 @@
                                 </div>
                             </div>
 
-                            <!-- Row 6: Cost Analysis & Financial Impact of Mistakes -->
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                            <!-- Row 6: Cost Analysis, Maximum Drawdown, R-Value Analysis -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                                 <!-- Cost Analysis Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                     <div class="flex justify-between items-center mb-4">
@@ -2421,6 +2421,35 @@
                                     </div>
                                 </div>
 
+                                <!-- Maximum Drawdown Card -->
+                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold" style="color: var(--text-primary);">Maximum Drawdown</h3>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #ef4444;">
+                                            <i data-feather="alert-triangle" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div id="max-drawdown-metrics" class="space-y-3">
+                                        <!-- Dynamic content -->
+                                    </div>
+                                </div>
+
+                                <!-- R-Value Analysis Card -->
+                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold" style="color: var(--text-primary);">R-Value Analysis</h3>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #3b82f6;">
+                                            <i data-feather="target" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div id="r-value-metrics" class="space-y-3">
+                                        <!-- Dynamic content -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 7: Financial Impact of Mistakes -->
+                            <div class="grid grid-cols-1 gap-6 mt-6">
                                 <!-- Financial Impact of Mistakes Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                     <div class="flex justify-between items-center mb-4">
@@ -2435,7 +2464,7 @@
                                 </div>
                             </div>
 
-                            <!-- Row 7: Detailed Performance by Day of the Week -->
+                            <!-- Row 8: Detailed Performance by Day of the Week -->
                             <div class="grid grid-cols-1 gap-6 mt-6">
                                 <!-- Detailed Performance by Day of the Week Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
@@ -2451,7 +2480,7 @@
                                 </div>
                             </div>
 
-                            <!-- Row 8: Trade Duration Analysis -->
+                            <!-- Row 9: Trade Duration Analysis -->
                             <div class="grid grid-cols-1 gap-6 mt-6">
                                 <!-- Trade Duration Analysis Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
@@ -2467,21 +2496,6 @@
                                 </div>
                             </div>
 
-                            <!-- Row 9: Maximum Drawdown -->
-                            <div class="grid grid-cols-1 gap-6 mt-6">
-                                <!-- Maximum Drawdown Card -->
-                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <h3 class="font-semibold" style="color: var(--text-primary);">Maximum Drawdown</h3>
-                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #ef4444;">
-                                            <i data-feather="alert-triangle" class="w-4 h-4 text-white"></i>
-                                        </div>
-                                    </div>
-                                    <div id="max-drawdown-metrics" class="space-y-3">
-                                        <!-- Dynamic content -->
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -4311,6 +4325,80 @@
             }
         };
 
+        // Calculate R-Value Analysis
+        const calculateRValue = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return { 
+                    avgRValue: 0, 
+                    bestRValue: 0, 
+                    worstRValue: 0, 
+                    totalRValue: 0,
+                    winningRValue: 0,
+                    losingRValue: 0,
+                    rValueDistribution: []
+                };
+                
+                const rValues = [];
+                const winningRValues = [];
+                const losingRValues = [];
+                let totalRValue = 0;
+                let bestRValue = -Infinity;
+                let worstRValue = Infinity;
+                
+                trades.forEach(trade => {
+                    const pnl = calculateNetPnl(trade);
+                    
+                    // Calculate 1R (initial risk) from stop loss
+                    const entryPrice = parseFloat(trade.entry_price) || 0;
+                    const stopLoss = parseFloat(trade.stop_loss) || 0;
+                    const quantity = parseFloat(trade.quantity) || 0;
+                    
+                    if (entryPrice > 0 && stopLoss > 0 && quantity > 0) {
+                        const stopLossDistance = Math.abs(entryPrice - stopLoss);
+                        const oneR = stopLossDistance * quantity;
+                        
+                        if (oneR > 0) {
+                            const rValue = pnl / oneR;
+                            rValues.push(rValue);
+                            totalRValue += rValue;
+                            
+                            if (rValue > bestRValue) bestRValue = rValue;
+                            if (rValue < worstRValue) worstRValue = rValue;
+                            
+                            if (rValue > 0) winningRValues.push(rValue);
+                            else if (rValue < 0) losingRValues.push(rValue);
+                        }
+                    }
+                });
+                
+                const avgRValue = rValues.length > 0 ? totalRValue / rValues.length : 0;
+                const avgWinningRValue = winningRValues.length > 0 ? 
+                    winningRValues.reduce((sum, r) => sum + r, 0) / winningRValues.length : 0;
+                const avgLosingRValue = losingRValues.length > 0 ? 
+                    losingRValues.reduce((sum, r) => sum + r, 0) / losingRValues.length : 0;
+                
+                return {
+                    avgRValue,
+                    bestRValue: bestRValue === -Infinity ? 0 : bestRValue,
+                    worstRValue: worstRValue === Infinity ? 0 : worstRValue,
+                    totalRValue,
+                    winningRValue: avgWinningRValue,
+                    losingRValue: avgLosingRValue,
+                    rValueDistribution: rValues
+                };
+            } catch (error) {
+                console.warn('Error calculating R-Value:', error);
+                return { 
+                    avgRValue: 0, 
+                    bestRValue: 0, 
+                    worstRValue: 0, 
+                    totalRValue: 0,
+                    winningRValue: 0,
+                    losingRValue: 0,
+                    rValueDistribution: []
+                };
+            }
+        };
 
         // Function to calculate P&L for partial exit trades using stored partial exit data (sync version)
         const calculatePartialExitPnlSync = (trade) => {
@@ -8472,6 +8560,9 @@
                 // Render Maximum Drawdown
                 renderMaxDrawdown(closed);
 
+                // Render R-Value Analysis
+                renderRValue(closed);
+
             } catch (e) {
                 console.error('renderAdvancedMetrics error', e);
             }
@@ -8511,6 +8602,53 @@
                 }
             } catch (error) {
                 console.error('renderMaxDrawdown error', error);
+            }
+        };
+
+        // Render R-Value Analysis
+        const renderRValue = (trades) => {
+            try {
+                const rValueData = calculateRValue(trades);
+                const rValueElement = document.getElementById('r-value-metrics');
+                
+                if (rValueElement) {
+                    const formatRValue = (value) => {
+                        const sign = value >= 0 ? '+' : '';
+                        return `${sign}${value.toFixed(2)}R`;
+                    };
+                    
+                    rValueElement.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm" style="color: var(--text-secondary);">Average R-Value</span>
+                            <span class="text-sm font-medium" style="color: ${rValueData.avgRValue >= 0 ? '#10b981' : '#ef4444'};">
+                                ${formatRValue(rValueData.avgRValue)}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm" style="color: var(--text-secondary);">Best R-Value</span>
+                            <span class="text-sm font-medium text-green-500">${formatRValue(rValueData.bestRValue)}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm" style="color: var(--text-secondary);">Worst R-Value</span>
+                            <span class="text-sm font-medium text-red-500">${formatRValue(rValueData.worstRValue)}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm" style="color: var(--text-secondary);">Total R-Value</span>
+                            <span class="text-sm font-medium" style="color: ${rValueData.totalRValue >= 0 ? '#10b981' : '#ef4444'};">
+                                ${formatRValue(rValueData.totalRValue)}
+                            </span>
+                        </div>
+                        <div class="border-t pt-3 mt-3" style="border-color: var(--border-color);">
+                            <p class="text-xs" style="color: var(--text-muted);">
+                                R-Value standardizes trade outcomes as multiples of your initial risk. +2R = made twice your risk, -1R = lost your full risk.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    console.warn('R-Value metrics container not found');
+                }
+            } catch (error) {
+                console.error('renderRValue error', error);
             }
         };
 
