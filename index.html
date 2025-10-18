@@ -2464,8 +2464,8 @@
                                 </div>
                             </div>
 
-                            <!-- Row 8: Detailed Performance by Day of the Week -->
-                            <div class="grid grid-cols-1 gap-6 mt-6">
+                            <!-- Row 8: Detailed Performance by Day of the Week & Trade Duration Analysis -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                                 <!-- Detailed Performance by Day of the Week Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                     <div class="flex justify-between items-center mb-4">
@@ -2478,10 +2478,7 @@
                                         <!-- Dynamic table content -->
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Row 9: Trade Duration Analysis -->
-                            <div class="grid grid-cols-1 gap-6 mt-6">
                                 <!-- Trade Duration Analysis Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                     <div class="flex justify-between items-center mb-4">
@@ -8705,24 +8702,24 @@
                     if (mistakeData.length > 0) {
                         const formatCurrency = (value) => {
                             const sign = value >= 0 ? '' : '-';
-                            return `${sign}$${Math.abs(value).toFixed(0)}`;
+                            return `${sign}₹${Math.abs(value).toFixed(0)}`;
                         };
                         
                         tableElement.innerHTML = `
-                            <table class="w-full">
+                            <table class="w-full text-xs">
                                 <thead>
                                     <tr class="border-b" style="border-color: var(--border-color);">
-                                        <th class="text-left py-2 px-3" style="color: var(--text-secondary);">Mistake</th>
-                                        <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total P&L Impact</th>
-                                        <th class="text-right py-2 px-3" style="color: var(--text-secondary);">Number of Times<br>Made</th>
+                                        <th class="text-left py-1 px-2 text-xs" style="color: var(--text-secondary);">Mistake</th>
+                                        <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Total P&L Impact</th>
+                                        <th class="text-right py-1 px-2 text-xs" style="color: var(--text-secondary);">Number of Times<br>Made</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${mistakeData.map(item => `
                                         <tr class="border-b" style="border-color: var(--border-color);">
-                                            <td class="py-2 px-3" style="color: var(--text-primary);">${item.mistake}</td>
-                                            <td class="py-2 px-3 text-center" style="color: #f97316;">${formatCurrency(item.totalImpact)}</td>
-                                            <td class="py-2 px-3 text-right" style="color: var(--text-primary);">${item.count}</td>
+                                            <td class="py-1 px-2 text-xs" style="color: var(--text-primary);">${item.mistake}</td>
+                                            <td class="py-1 px-2 text-center text-xs" style="color: #f97316;">${formatCurrency(item.totalImpact)}</td>
+                                            <td class="py-1 px-2 text-right text-xs" style="color: var(--text-primary);">${item.count}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -8763,30 +8760,30 @@
                     };
                     
                     tableElement.innerHTML = `
-                        <table class="w-full">
+                        <table class="w-full text-xs">
                             <thead>
                                 <tr class="border-b" style="border-color: var(--border-color);">
-                                    <th class="text-left py-2 px-3" style="color: var(--text-secondary);">Day</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total P&L</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Win Rate (%)</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Avg. P&L per</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total Trades</th>
+                                    <th class="text-left py-1 px-2 text-xs" style="color: var(--text-secondary);">Day</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Total P&L</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Win Rate (%)</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Avg. P&L per</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Total Trades</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${dayData.map(item => `
                                     <tr class="border-b" style="border-color: var(--border-color);">
-                                        <td class="py-2 px-3" style="color: var(--text-primary);">${item.day}</td>
-                                        <td class="py-2 px-3 text-center" style="color: ${item.totalPnl >= 0 ? '#10b981' : '#ef4444'};">
+                                        <td class="py-1 px-2 text-xs" style="color: var(--text-primary);">${item.day}</td>
+                                        <td class="py-1 px-2 text-center text-xs" style="color: ${item.totalPnl >= 0 ? '#10b981' : '#ef4444'};">
                                             ${formatCurrency(item.totalPnl)}
                                         </td>
-                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
                                             ${formatPercentage(item.winRate)}
                                         </td>
-                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
                                             ${formatAvgPnl(item.avgPnl)}
                                         </td>
-                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
                                             ${item.totalTrades > 0 ? item.totalTrades : '-'}
                                         </td>
                                     </tr>
@@ -8826,30 +8823,30 @@
                     };
                     
                     tableElement.innerHTML = `
-                        <table class="w-full">
+                        <table class="w-full text-xs">
                             <thead>
                                 <tr class="border-b" style="border-color: var(--border-color);">
-                                    <th class="text-left py-2 px-3" style="color: var(--text-secondary);">Duration Range</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total P&L</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Win Rate (%)</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total Trades</th>
-                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Avg. P&L per Trade</th>
+                                    <th class="text-left py-1 px-2 text-xs" style="color: var(--text-secondary);">Duration Range</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Total P&L</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Win Rate (%)</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Total Trades</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Avg. P&L per Trade</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${durationData.map(item => `
                                     <tr class="border-b" style="border-color: var(--border-color);">
-                                        <td class="py-2 px-3" style="color: var(--text-primary);">${item.duration}</td>
-                                        <td class="py-2 px-3 text-center" style="color: ${item.totalPnl >= 0 ? '#10b981' : '#ef4444'};">
+                                        <td class="py-1 px-2 text-xs" style="color: var(--text-primary);">${item.duration}</td>
+                                        <td class="py-1 px-2 text-center text-xs" style="color: ${item.totalPnl >= 0 ? '#10b981' : '#ef4444'};">
                                             ${formatCurrency(item.totalPnl)}
                                         </td>
-                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
                                             ${formatPercentage(item.winRate)}
                                         </td>
-                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
                                             ${item.totalTrades > 0 ? item.totalTrades : '-'}
                                         </td>
-                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
                                             ${formatAvgPnl(item.avgPnl)}
                                         </td>
                                     </tr>
