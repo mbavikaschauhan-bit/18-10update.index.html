@@ -2466,6 +2466,22 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Row 9: Maximum Drawdown -->
+                            <div class="grid grid-cols-1 gap-6 mt-6">
+                                <!-- Maximum Drawdown Card -->
+                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold" style="color: var(--text-primary);">Maximum Drawdown</h3>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #ef4444;">
+                                            <i data-feather="alert-triangle" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div id="max-drawdown-metrics" class="space-y-3">
+                                        <!-- Dynamic content -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -4294,6 +4310,7 @@
                 return [];
             }
         };
+
 
         // Function to calculate P&L for partial exit trades using stored partial exit data (sync version)
         const calculatePartialExitPnlSync = (trade) => {
@@ -8452,8 +8469,48 @@
                 // Render Trade Duration Analysis
                 renderTradeDuration(closed);
 
+                // Render Maximum Drawdown
+                renderMaxDrawdown(closed);
+
             } catch (e) {
                 console.error('renderAdvancedMetrics error', e);
+            }
+        };
+
+        // Render Maximum Drawdown
+        const renderMaxDrawdown = (trades) => {
+            try {
+                const maxDrawdownAmount = calculateMaxDrawdown(trades);
+                const drawdownElement = document.getElementById('max-drawdown-metrics');
+                
+                if (drawdownElement) {
+                    const formatCurrency = (value) => {
+                        const sign = value >= 0 ? '' : '-';
+                        return `${sign}₹${Math.abs(value).toFixed(0)}`;
+                    };
+                    
+                    // Calculate percentage based on starting balance (assuming 100,000 as default)
+                    const startingBalance = 100000;
+                    const maxDrawdownPercentage = startingBalance > 0 ? (maxDrawdownAmount / startingBalance) * 100 : 0;
+                    
+                    drawdownElement.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm" style="color: var(--text-secondary);">Max Drawdown (₹)</span>
+                            <span class="text-sm font-medium text-red-500">${formatCurrency(maxDrawdownAmount)}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm" style="color: var(--text-secondary);">Max Drawdown (%)</span>
+                            <span class="text-sm font-medium text-red-500">${maxDrawdownPercentage.toFixed(2)}%</span>
+                        </div>
+                        <div class="border-t pt-3 mt-3" style="border-color: var(--border-color);">
+                            <p class="text-xs" style="color: var(--text-muted);">This is the largest drop your account experienced from a peak to a subsequent low.</p>
+                        </div>
+                    `;
+                } else {
+                    console.warn('Maximum Drawdown metrics container not found');
+                }
+            } catch (error) {
+                console.error('renderMaxDrawdown error', error);
             }
         };
 
