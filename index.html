@@ -2448,8 +2448,8 @@
                                 </div>
                             </div>
 
-                            <!-- Row 7: Financial Impact of Mistakes -->
-                            <div class="grid grid-cols-1 gap-6 mt-6">
+                            <!-- Row 7: Financial Impact of Mistakes & P&L by Quantity Traded Tier -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                                 <!-- Financial Impact of Mistakes Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                     <div class="flex justify-between items-center mb-4">
@@ -2459,6 +2459,19 @@
                                         </div>
                                     </div>
                                     <div id="mistake-impact-table" class="overflow-x-auto">
+                                        <!-- Dynamic table content -->
+                                    </div>
+                                </div>
+
+                                <!-- P&L by Quantity Traded Tier Card -->
+                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold" style="color: var(--text-primary);">P&L by Quantity Traded Tier</h3>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #10b981;">
+                                            <i data-feather="trending-up" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div id="quantity-tier-table" class="overflow-x-auto">
                                         <!-- Dynamic table content -->
                                     </div>
                                 </div>
@@ -4394,6 +4407,71 @@
                     losingRValue: 0,
                     rValueDistribution: []
                 };
+            }
+        };
+
+        // Calculate P&L by Quantity Traded Tier
+            const calculateQuantityTier = (trades) => {
+                try {
+                    if (!trades || trades.length === 0) return [];
+                    
+                    const quantityTiers = [
+                        { name: '1-100 shares', min: 1, max: 100 },
+                        { name: '101-500 shares', min: 101, max: 500 },
+                        { name: '501-1000 shares', min: 501, max: 1000 },
+                        { name: '1001-1500 shares', min: 1001, max: 1500 },
+                        { name: '1501-2000 shares', min: 1501, max: 2000 },
+                        { name: '>2000 shares', min: 2001, max: Infinity }
+                    ];
+                
+                const tierMap = new Map();
+                
+                // Initialize all tiers
+                quantityTiers.forEach(tier => {
+                    tierMap.set(tier.name, {
+                        totalPnl: 0,
+                        totalTrades: 0,
+                        winningTrades: 0,
+                        losingTrades: 0
+                    });
+                });
+                
+                trades.forEach(trade => {
+                    const quantity = parseFloat(trade.quantity) || 0;
+                    const pnl = calculateNetPnl(trade);
+                    
+                    // Find the appropriate tier
+                    const tier = quantityTiers.find(t => 
+                        quantity >= t.min && quantity <= t.max
+                    );
+                    
+                    if (tier) {
+                        const tierData = tierMap.get(tier.name);
+                        tierData.totalPnl += pnl;
+                        tierData.totalTrades += 1;
+                        
+                        if (pnl > 0) tierData.winningTrades += 1;
+                        else if (pnl < 0) tierData.losingTrades += 1;
+                    }
+                });
+                
+                // Calculate metrics for each tier
+                return quantityTiers.map(tier => {
+                    const data = tierMap.get(tier.name);
+                    const winRate = data.totalTrades > 0 ? (data.winningTrades / data.totalTrades) * 100 : 0;
+                    const avgPnl = data.totalTrades > 0 ? data.totalPnl / data.totalTrades : 0;
+                    
+                    return {
+                        tier: tier.name,
+                        totalPnl: data.totalPnl,
+                        winRate: winRate,
+                        avgPnl: avgPnl,
+                        totalTrades: data.totalTrades
+                    };
+                });
+            } catch (error) {
+                console.warn('Error calculating Quantity Tier:', error);
+                return [];
             }
         };
 
@@ -8560,6 +8638,9 @@
                 // Render R-Value Analysis
                 renderRValue(closed);
 
+                // Render P&L by Quantity Traded Tier
+                renderQuantityTier(closed);
+
             } catch (e) {
                 console.error('renderAdvancedMetrics error', e);
             }
@@ -8646,6 +8727,63 @@
                 }
             } catch (error) {
                 console.error('renderRValue error', error);
+            }
+        };
+
+        // Render P&L by Quantity Traded Tier
+        const renderQuantityTier = (trades) => {
+            try {
+                const tierData = calculateQuantityTier(trades);
+                const tableElement = document.getElementById('quantity-tier-table');
+                
+                if (tableElement) {
+                    const formatCurrency = (value) => {
+                        if (value === 0) return '-';
+                        const sign = value >= 0 ? '+' : '';
+                        return `${sign}₹${Math.abs(value).toFixed(0)}`;
+                    };
+                    
+                    const formatPercentage = (value) => {
+                        return value > 0 ? `${value.toFixed(0)}%` : '-';
+                    };
+                    
+                    tableElement.innerHTML = `
+                        <table class="w-full text-xs">
+                            <thead>
+                                <tr class="border-b" style="border-color: var(--border-color);">
+                                    <th class="text-left py-1 px-2 text-xs" style="color: var(--text-secondary);">Quantity Traded</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Trade Count</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Total P&L</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Win Rate (%)</th>
+                                    <th class="text-center py-1 px-2 text-xs" style="color: var(--text-secondary);">Avg. P&L per Trade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tierData.map(item => `
+                                    <tr class="border-b" style="border-color: var(--border-color);">
+                                        <td class="py-1 px-2 text-xs" style="color: var(--text-primary);">${item.tier}</td>
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
+                                            ${item.totalTrades > 0 ? item.totalTrades : '-'}
+                                        </td>
+                                        <td class="py-1 px-2 text-center text-xs" style="color: ${item.totalPnl >= 0 ? '#10b981' : '#ef4444'};">
+                                            ${formatCurrency(item.totalPnl)}
+                                        </td>
+                                        <td class="py-1 px-2 text-center text-xs" style="color: var(--text-primary);">
+                                            ${formatPercentage(item.winRate)}
+                                        </td>
+                                        <td class="py-1 px-2 text-center text-xs" style="color: ${item.avgPnl >= 0 ? '#10b981' : '#ef4444'};">
+                                            ${formatCurrency(item.avgPnl)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    console.warn('Quantity Tier table container not found');
+                }
+            } catch (error) {
+                console.error('renderQuantityTier error', error);
             }
         };
 
