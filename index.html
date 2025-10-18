@@ -1422,7 +1422,7 @@
                             <div class="p-5 rounded-lg shadow-sm text-center" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                 <h3 class="text-sm font-medium" style="color: var(--text-secondary);">Profit Factor</h3>
                                 <p id="db-profit-factor" class="text-2xl font-bold mt-2" style="color: var(--text-primary);">0.00</p>
-                                <p class="text-xs" style="color: var(--text-muted);">Gross P&L split</p>
+                                <p class="text-xs" style="color: var(--text-muted);">You make ₹<span id="profit-factor-ratio">0.00</span> for every ₹1 lost</p>
                             </div>
                             <div class="p-5 rounded-lg shadow-sm text-center" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                 <h3 class="text-sm font-medium" style="color: var(--text-secondary);">Avg win/loss trade</h3>
@@ -5285,11 +5285,11 @@
                 // Use NET P&L to determine if it's a win or loss
                 if (netPnlValue > 0) {
                     wins++;
-                    grossProfit += grossPnlValue;
+                    grossProfit += netPnlValue;  // Use net P&L consistently
                     totalNetProfit += netPnlValue;
                 } else if (netPnlValue < 0) {
                     losses++;
-                    grossLoss += Math.abs(grossPnlValue);
+                    grossLoss += Math.abs(netPnlValue);  // Use net P&L consistently
                     totalNetLoss += Math.abs(netPnlValue);
                 }
             });
@@ -5332,6 +5332,9 @@
                 
                 const profitFactorEl = document.getElementById('db-profit-factor');
                 if (profitFactorEl) profitFactorEl.textContent = typeof profitFactor === 'number' ? profitFactor.toFixed(2) : profitFactor;
+                
+                const profitFactorRatioEl = document.getElementById('profit-factor-ratio');
+                if (profitFactorRatioEl) profitFactorRatioEl.textContent = typeof profitFactor === 'number' ? profitFactor.toFixed(2) : profitFactor;
                 
                 const avgWinLossEl = document.getElementById('db-avg-win-loss');
                 if (avgWinLossEl) avgWinLossEl.textContent = typeof avgWinLossRatio === 'number' ? avgWinLossRatio.toFixed(2) : avgWinLossRatio;
@@ -18900,11 +18903,11 @@
                     // Use NET P&L to determine if it's a win or loss
                     if (netPnlValue > 0) {
                         wins++;
-                        grossProfit += grossPnlValue;
+                        grossProfit += netPnlValue;  // Use net P&L consistently
                         totalNetProfit += netPnlValue;
                     } else if (netPnlValue < 0) {
                         losses++;
-                        grossLoss += Math.abs(grossPnlValue);
+                        grossLoss += Math.abs(netPnlValue);  // Use net P&L consistently
                         totalNetLoss += Math.abs(netPnlValue);
                     }
                 });
@@ -18949,6 +18952,9 @@
                 
                 const profitFactorEl = document.getElementById('db-profit-factor');
                 if (profitFactorEl) profitFactorEl.textContent = profitFactor;
+                
+                const profitFactorRatioEl = document.getElementById('profit-factor-ratio');
+                if (profitFactorRatioEl) profitFactorRatioEl.textContent = profitFactor;
                 
                 const avgWinLossEl = document.getElementById('db-avg-win-loss');
                 if (avgWinLossEl) avgWinLossEl.textContent = avgWinLoss;
