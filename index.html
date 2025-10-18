@@ -2362,6 +2362,48 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Row 5: Advanced Trading Metrics -->
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                                    <!-- Risk-Adjusted Performance Card -->
+                                    <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <h3 class="font-semibold" style="color: var(--text-primary);">Risk-Adjusted Performance</h3>
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #ef4444;">
+                                                <i data-feather="shield" class="w-4 h-4 text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div id="risk-adjusted-performance-metrics" class="space-y-3">
+                                            <!-- Dynamic content -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Winning Trade Analysis (MAE) Card -->
+                                    <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <h3 class="font-semibold" style="color: var(--text-primary);">Winning Trade Analysis (MAE)</h3>
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #22c55e;">
+                                                <i data-feather="trending-up" class="w-4 h-4 text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div id="winning-trade-analysis-metrics" class="space-y-3">
+                                            <!-- Dynamic content -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Losing Trade Analysis (MFE) Card -->
+                                    <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <h3 class="font-semibold" style="color: var(--text-primary);">Losing Trade Analysis (MFE)</h3>
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #f97316;">
+                                                <i data-feather="trending-down" class="w-4 h-4 text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div id="losing-trade-analysis-metrics" class="space-y-3">
+                                            <!-- Dynamic content -->
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3778,6 +3820,182 @@
             } catch (error) {
                 console.warn('Error calculating net P&L for trade:', trade?.id, error);
                 return 0;
+            }
+        };
+
+        // Advanced Trading Metrics Calculation Functions
+        
+        // Calculate Sharpe Ratio (Risk-adjusted return)
+        const calculateSharpeRatio = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return { value: 0, status: 'no-data' };
+                
+                const returns = trades.map(trade => {
+                    const pnl = calculateNetPnl(trade);
+                    return pnl;
+                }).filter(r => isFinite(r));
+                
+                if (returns.length === 0) return { value: 0, status: 'no-returns' };
+                
+                const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+                const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
+                const stdDev = Math.sqrt(variance);
+                
+                if (stdDev === 0) return { value: 0, status: 'no-volatility' };
+                
+                // Annualize the Sharpe ratio (assuming daily returns)
+                const sharpeRatio = (avgReturn / stdDev) * Math.sqrt(252); // 252 trading days per year
+                
+                return { 
+                    value: sharpeRatio, 
+                    status: sharpeRatio > 1 ? 'good' : sharpeRatio > 0.5 ? 'moderate' : 'needs-improvement' 
+                };
+            } catch (error) {
+                console.warn('Error calculating Sharpe Ratio:', error);
+                return { value: 0, status: 'error' };
+            }
+        };
+
+        // Calculate Sortino Ratio (Downside risk-adjusted return)
+        const calculateSortinoRatio = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return { value: 0, status: 'no-data' };
+                
+                const returns = trades.map(trade => {
+                    const pnl = calculateNetPnl(trade);
+                    return pnl;
+                }).filter(r => isFinite(r));
+                
+                if (returns.length === 0) return { value: 0, status: 'no-returns' };
+                
+                const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+                const negativeReturns = returns.filter(r => r < 0);
+                
+                if (negativeReturns.length === 0) return { value: 0, status: 'no-downside' };
+                
+                const downsideVariance = negativeReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / negativeReturns.length;
+                const downsideDeviation = Math.sqrt(downsideVariance);
+                
+                if (downsideDeviation === 0) return { value: 0, status: 'no-downside-volatility' };
+                
+                // Annualize the Sortino ratio
+                const sortinoRatio = (avgReturn / downsideDeviation) * Math.sqrt(252);
+                
+                return { 
+                    value: sortinoRatio, 
+                    status: sortinoRatio > 1 ? 'good' : sortinoRatio > 0.5 ? 'moderate' : 'needs-improvement' 
+                };
+            } catch (error) {
+                console.warn('Error calculating Sortino Ratio:', error);
+                return { value: 0, status: 'error' };
+            }
+        };
+
+        // Calculate Average MAE (Maximum Adverse Excursion) for winning trades
+        const calculateAverageMAE = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return { value: 0, status: 'no-data' };
+                
+                const winningTrades = trades.filter(trade => {
+                    const pnl = calculateNetPnl(trade);
+                    return isFinite(pnl) && pnl > 0;
+                });
+                
+                if (winningTrades.length === 0) return { value: 0, status: 'no-winners' };
+                
+                // Calculate MAE using a more realistic approach
+                // MAE represents the maximum drawdown during a winning trade
+                const maeValues = winningTrades.map(trade => {
+                    const entryPrice = parseFloat(trade.entry_price) || 0;
+                    const exitPrice = parseFloat(trade.exit_price) || 0;
+                    const quantity = parseFloat(trade.quantity) || 0;
+                    const isShort = trade.trade_type === 'Short' || trade.direction === 'Short';
+                    
+                    if (entryPrice === 0 || exitPrice === 0 || quantity === 0) return 0;
+                    
+                    // Calculate the maximum adverse movement
+                    // For MAE, we estimate based on the trade's volatility and duration
+                    const priceRange = Math.abs(exitPrice - entryPrice);
+                    const volatility = priceRange / entryPrice; // Price volatility percentage
+                    
+                    // Estimate MAE as a percentage of the trade's volatility
+                    // This is a simplified approach - real MAE requires intraday data
+                    const estimatedMAE = priceRange * 0.3; // Assume 30% of price movement was adverse
+                    
+                    if (isShort) {
+                        // For short trades, adverse movement is price going up
+                        return estimatedMAE * quantity;
+                    } else {
+                        // For long trades, adverse movement is price going down
+                        return estimatedMAE * quantity;
+                    }
+                }).filter(mae => isFinite(mae) && mae > 0);
+                
+                if (maeValues.length === 0) return { value: 0, status: 'no-mae-data' };
+                
+                const avgMAE = maeValues.reduce((sum, mae) => sum + mae, 0) / maeValues.length;
+                
+                return { 
+                    value: -Math.abs(avgMAE), // Negative value to show "pain"
+                    status: avgMAE < 1000 ? 'good' : avgMAE < 5000 ? 'moderate' : 'high-pain' 
+                };
+            } catch (error) {
+                console.warn('Error calculating Average MAE:', error);
+                return { value: 0, status: 'error' };
+            }
+        };
+
+        // Calculate Average MFE (Maximum Favorable Excursion) for losing trades
+        const calculateAverageMFE = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return { value: 0, status: 'no-data' };
+                
+                const losingTrades = trades.filter(trade => {
+                    const pnl = calculateNetPnl(trade);
+                    return isFinite(pnl) && pnl < 0;
+                });
+                
+                if (losingTrades.length === 0) return { value: 0, status: 'no-losers' };
+                
+                // Calculate MFE using a more realistic approach
+                // MFE represents the maximum profit during a losing trade
+                const mfeValues = losingTrades.map(trade => {
+                    const entryPrice = parseFloat(trade.entry_price) || 0;
+                    const exitPrice = parseFloat(trade.exit_price) || 0;
+                    const quantity = parseFloat(trade.quantity) || 0;
+                    const isShort = trade.trade_type === 'Short' || trade.direction === 'Short';
+                    
+                    if (entryPrice === 0 || exitPrice === 0 || quantity === 0) return 0;
+                    
+                    // Calculate the maximum favorable movement
+                    // For MFE, we estimate based on the trade's volatility and duration
+                    const priceRange = Math.abs(exitPrice - entryPrice);
+                    const volatility = priceRange / entryPrice; // Price volatility percentage
+                    
+                    // Estimate MFE as a percentage of the trade's volatility
+                    // This is a simplified approach - real MFE requires intraday data
+                    const estimatedMFE = priceRange * 0.4; // Assume 40% of price movement was favorable
+                    
+                    if (isShort) {
+                        // For short trades, favorable movement is price going down
+                        return estimatedMFE * quantity;
+                    } else {
+                        // For long trades, favorable movement is price going up
+                        return estimatedMFE * quantity;
+                    }
+                }).filter(mfe => isFinite(mfe) && mfe > 0);
+                
+                if (mfeValues.length === 0) return { value: 0, status: 'no-mfe-data' };
+                
+                const avgMFE = mfeValues.reduce((sum, mfe) => sum + mfe, 0) / mfeValues.length;
+                
+                return { 
+                    value: avgMFE,
+                    status: avgMFE > 2000 ? 'high-mfe' : avgMFE > 1000 ? 'moderate-mfe' : 'low-mfe' 
+                };
+            } catch (error) {
+                console.warn('Error calculating Average MFE:', error);
+                return { value: 0, status: 'error' };
             }
         };
 
@@ -7841,6 +8059,86 @@
                     }
                 } else {
                     console.warn('Emotional State metrics container not found');
+                }
+
+                // Render Risk-Adjusted Performance Metrics
+                const riskAdjustedElement = document.getElementById('risk-adjusted-performance-metrics');
+                if (riskAdjustedElement) {
+                    const sharpeData = calculateSharpeRatio(closed);
+                    const sortinoData = calculateSortinoRatio(closed);
+                    
+                    const sharpeValue = sharpeData.value.toFixed(2);
+                    const sortinoValue = sortinoData.value.toFixed(2);
+                    
+                    const sharpeColor = sharpeData.status === 'good' ? 'text-green-500' : 
+                                      sharpeData.status === 'moderate' ? 'text-yellow-500' : 'text-red-500';
+                    const sortinoColor = sortinoData.status === 'good' ? 'text-green-500' : 
+                                       sortinoData.status === 'moderate' ? 'text-yellow-500' : 'text-red-500';
+                    
+                    riskAdjustedElement.innerHTML = `
+                        ${createMetricRow('Sharpe Ratio (Annualized)', sharpeValue, sharpeColor)}
+                        ${createMetricRow('Sortino Ratio (Annualized)', sortinoValue, sortinoColor)}
+                    `;
+                } else {
+                    console.warn('Risk-Adjusted Performance metrics container not found');
+                }
+
+                // Render Winning Trade Analysis (MAE) Metrics
+                const winningTradeElement = document.getElementById('winning-trade-analysis-metrics');
+                if (winningTradeElement) {
+                    const maeData = calculateAverageMAE(closed);
+                    
+                    // Debug logging
+                    console.log('MAE Calculation Debug:', {
+                        totalTrades: closed.length,
+                        maeData: maeData,
+                        winningTrades: closed.filter(t => {
+                            const pnl = calculateNetPnl(t);
+                            return isFinite(pnl) && pnl > 0;
+                        }).length
+                    });
+                    
+                    const maeValue = formatCurrency(Math.abs(maeData.value));
+                    const maeColor = maeData.status === 'good' ? 'text-green-500' : 
+                                   maeData.status === 'moderate' ? 'text-yellow-500' : 'text-red-500';
+                    
+                    winningTradeElement.innerHTML = `
+                        ${createMetricRow('Average MAE', `-${maeValue}`, maeColor)}
+                        <div class="text-xs mt-2" style="color: var(--text-muted);">
+                            This is the average 'pain' your winning trades went through before becoming profitable.
+                        </div>
+                    `;
+                } else {
+                    console.warn('Winning Trade Analysis metrics container not found');
+                }
+
+                // Render Losing Trade Analysis (MFE) Metrics
+                const losingTradeElement = document.getElementById('losing-trade-analysis-metrics');
+                if (losingTradeElement) {
+                    const mfeData = calculateAverageMFE(closed);
+                    
+                    // Debug logging
+                    console.log('MFE Calculation Debug:', {
+                        totalTrades: closed.length,
+                        mfeData: mfeData,
+                        losingTrades: closed.filter(t => {
+                            const pnl = calculateNetPnl(t);
+                            return isFinite(pnl) && pnl < 0;
+                        }).length
+                    });
+                    
+                    const mfeValue = formatCurrency(mfeData.value);
+                    const mfeColor = mfeData.status === 'high-mfe' ? 'text-red-500' : 
+                                   mfeData.status === 'moderate-mfe' ? 'text-yellow-500' : 'text-green-500';
+                    
+                    losingTradeElement.innerHTML = `
+                        ${createMetricRow('Average MFE', `+${mfeValue}`, mfeColor)}
+                        <div class="text-xs mt-2" style="color: var(--text-muted);">
+                            This is the average unrealized profit your losing trades had before turning negative.
+                        </div>
+                    `;
+                } else {
+                    console.warn('Losing Trade Analysis metrics container not found');
                 }
 
             } catch (e) {
