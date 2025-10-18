@@ -2406,8 +2406,8 @@
                                 </div>
                             </div>
 
-                            <!-- Row 6: Cost Analysis -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                            <!-- Row 6: Cost Analysis & Financial Impact of Mistakes -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                                 <!-- Cost Analysis Card -->
                                 <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
                                     <div class="flex justify-between items-center mb-4">
@@ -2418,6 +2418,35 @@
                                     </div>
                                     <div id="cost-analysis-metrics" class="space-y-3">
                                         <!-- Dynamic content -->
+                                    </div>
+                                </div>
+
+                                <!-- Financial Impact of Mistakes Card -->
+                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold" style="color: var(--text-primary);">Financial Impact of Mistakes</h3>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #ef4444;">
+                                            <i data-feather="alert-triangle" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div id="mistake-impact-table" class="overflow-x-auto">
+                                        <!-- Dynamic table content -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 7: Detailed Performance by Day of the Week -->
+                            <div class="grid grid-cols-1 gap-6 mt-6">
+                                <!-- Detailed Performance by Day of the Week Card -->
+                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold" style="color: var(--text-primary);">Detailed Performance by Day of the Week</h3>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #10b981;">
+                                            <i data-feather="calendar" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div id="day-performance-table" class="overflow-x-auto">
+                                        <!-- Dynamic table content -->
                                     </div>
                                 </div>
                             </div>
@@ -4083,6 +4112,98 @@
                     netPnl: 0, 
                     chargesPercentage: 0 
                 };
+            }
+        };
+
+        // Calculate Financial Impact of Mistakes
+        const calculateMistakeImpact = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return [];
+                
+                const mistakeMap = new Map();
+                
+                trades.forEach(trade => {
+                    const mistakes = trade.mistakes || [];
+                    const pnl = calculateNetPnl(trade);
+                    
+                    mistakes.forEach(mistake => {
+                        if (!mistakeMap.has(mistake)) {
+                            mistakeMap.set(mistake, { totalImpact: 0, count: 0 });
+                        }
+                        mistakeMap.get(mistake).totalImpact += pnl;
+                        mistakeMap.get(mistake).count += 1;
+                    });
+                });
+                
+                // Convert to array and sort by impact (most costly first)
+                return Array.from(mistakeMap.entries())
+                    .map(([mistake, data]) => ({
+                        mistake,
+                        totalImpact: data.totalImpact,
+                        count: data.count
+                    }))
+                    .sort((a, b) => a.totalImpact - b.totalImpact); // Most negative first
+            } catch (error) {
+                console.warn('Error calculating Mistake Impact:', error);
+                return [];
+            }
+        };
+
+        // Calculate Detailed Performance by Day of the Week
+        const calculateDayPerformance = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return [];
+                
+                const dayMap = new Map();
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                
+                // Initialize all days
+                days.forEach(day => {
+                    dayMap.set(day, {
+                        totalPnl: 0,
+                        totalTrades: 0,
+                        winningTrades: 0,
+                        losingTrades: 0
+                    });
+                });
+                
+                trades.forEach(trade => {
+                    try {
+                        const tradeDate = new Date(trade.entry_date);
+                        const dayName = tradeDate.toLocaleDateString('en-US', { weekday: 'long' });
+                        
+                        if (dayMap.has(dayName)) {
+                            const pnl = calculateNetPnl(trade);
+                            const dayData = dayMap.get(dayName);
+                            
+                            dayData.totalPnl += pnl;
+                            dayData.totalTrades += 1;
+                            
+                            if (pnl > 0) dayData.winningTrades += 1;
+                            else if (pnl < 0) dayData.losingTrades += 1;
+                        }
+                    } catch (dateError) {
+                        console.warn('Error processing trade date:', trade.entry_date, dateError);
+                    }
+                });
+                
+                // Calculate metrics for each day
+                return days.map(day => {
+                    const data = dayMap.get(day);
+                    const winRate = data.totalTrades > 0 ? (data.winningTrades / data.totalTrades) * 100 : 0;
+                    const avgPnl = data.totalTrades > 0 ? data.totalPnl / data.totalTrades : 0;
+                    
+                    return {
+                        day,
+                        totalPnl: data.totalPnl,
+                        winRate: winRate,
+                        avgPnl: avgPnl,
+                        totalTrades: data.totalTrades
+                    };
+                });
+            } catch (error) {
+                console.warn('Error calculating Day Performance:', error);
+                return [];
             }
         };
 
@@ -8231,6 +8352,12 @@
                 // Render Cost Analysis Metrics
                 renderCostAnalysis(closed);
 
+                // Render Financial Impact of Mistakes
+                renderMistakeImpact(closed);
+
+                // Render Detailed Performance by Day of the Week
+                renderDayPerformance(closed);
+
             } catch (e) {
                 console.error('renderAdvancedMetrics error', e);
             }
@@ -8276,6 +8403,113 @@
                 }
             } catch (error) {
                 console.error('renderCostAnalysis error', error);
+            }
+        };
+
+        // Render Financial Impact of Mistakes
+        const renderMistakeImpact = (trades) => {
+            try {
+                const mistakeData = calculateMistakeImpact(trades);
+                const tableElement = document.getElementById('mistake-impact-table');
+                
+                if (tableElement) {
+                    if (mistakeData.length > 0) {
+                        const formatCurrency = (value) => {
+                            const sign = value >= 0 ? '' : '-';
+                            return `${sign}$${Math.abs(value).toFixed(0)}`;
+                        };
+                        
+                        tableElement.innerHTML = `
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b" style="border-color: var(--border-color);">
+                                        <th class="text-left py-2 px-3" style="color: var(--text-secondary);">Mistake</th>
+                                        <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total P&L Impact</th>
+                                        <th class="text-right py-2 px-3" style="color: var(--text-secondary);">Number of Times<br>Made</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${mistakeData.map(item => `
+                                        <tr class="border-b" style="border-color: var(--border-color);">
+                                            <td class="py-2 px-3" style="color: var(--text-primary);">${item.mistake}</td>
+                                            <td class="py-2 px-3 text-center" style="color: #f97316;">${formatCurrency(item.totalImpact)}</td>
+                                            <td class="py-2 px-3 text-right" style="color: var(--text-primary);">${item.count}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        `;
+                    } else {
+                        tableElement.innerHTML = '<p class="text-center py-4" style="color: var(--text-secondary);">No mistake data available</p>';
+                    }
+                } else {
+                    console.warn('Mistake Impact table container not found');
+                }
+            } catch (error) {
+                console.error('renderMistakeImpact error', error);
+            }
+        };
+
+        // Render Detailed Performance by Day of the Week
+        const renderDayPerformance = (trades) => {
+            try {
+                const dayData = calculateDayPerformance(trades);
+                const tableElement = document.getElementById('day-performance-table');
+                
+                if (tableElement) {
+                    const formatCurrency = (value) => {
+                        if (value === 0) return '-';
+                        const sign = value >= 0 ? '+' : '';
+                        return `${sign}₹${Math.abs(value).toFixed(0)}`;
+                    };
+                    
+                    const formatPercentage = (value) => {
+                        return value > 0 ? `${value.toFixed(0)}%` : '-';
+                    };
+                    
+                    const formatAvgPnl = (value) => {
+                        if (value === 0) return '-';
+                        const sign = value >= 0 ? '' : '-';
+                        return `${sign}₹${Math.abs(value).toFixed(0)}`;
+                    };
+                    
+                    tableElement.innerHTML = `
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b" style="border-color: var(--border-color);">
+                                    <th class="text-left py-2 px-3" style="color: var(--text-secondary);">Day</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total P&L</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Win Rate (%)</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Avg. P&L per</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total Trades</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${dayData.map(item => `
+                                    <tr class="border-b" style="border-color: var(--border-color);">
+                                        <td class="py-2 px-3" style="color: var(--text-primary);">${item.day}</td>
+                                        <td class="py-2 px-3 text-center" style="color: ${item.totalPnl >= 0 ? '#10b981' : '#ef4444'};">
+                                            ${formatCurrency(item.totalPnl)}
+                                        </td>
+                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                            ${formatPercentage(item.winRate)}
+                                        </td>
+                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                            ${formatAvgPnl(item.avgPnl)}
+                                        </td>
+                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                            ${item.totalTrades > 0 ? item.totalTrades : '-'}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    console.warn('Day Performance table container not found');
+                }
+            } catch (error) {
+                console.error('renderDayPerformance error', error);
             }
         };
 
