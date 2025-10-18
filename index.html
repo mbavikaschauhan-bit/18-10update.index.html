@@ -2450,6 +2450,22 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Row 8: Trade Duration Analysis -->
+                            <div class="grid grid-cols-1 gap-6 mt-6">
+                                <!-- Trade Duration Analysis Card -->
+                                <div class="p-6 rounded-lg shadow-sm" style="background-color: var(--bg-primary); border: 1px solid var(--border-color);">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-semibold" style="color: var(--text-primary);">Profitability by Trade Duration</h3>
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: #8b5cf6;">
+                                            <i data-feather="clock" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div id="trade-duration-table" class="overflow-x-auto">
+                                        <!-- Dynamic table content -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -4203,6 +4219,78 @@
                 });
             } catch (error) {
                 console.warn('Error calculating Day Performance:', error);
+                return [];
+            }
+        };
+
+        // Calculate Trade Duration Analysis
+        const calculateTradeDuration = (trades) => {
+            try {
+                if (!trades || trades.length === 0) return [];
+                
+                const durationBuckets = [
+                    { name: 'Under 5 mins', min: 0, max: 5 },
+                    { name: '5-30 mins', min: 5, max: 30 },
+                    { name: '30 mins - 1 hour', min: 30, max: 60 },
+                    { name: '1-4 hours', min: 60, max: 240 },
+                    { name: '4+ hours', min: 240, max: Infinity }
+                ];
+                
+                const bucketMap = new Map();
+                
+                // Initialize all buckets
+                durationBuckets.forEach(bucket => {
+                    bucketMap.set(bucket.name, {
+                        totalPnl: 0,
+                        totalTrades: 0,
+                        winningTrades: 0,
+                        losingTrades: 0
+                    });
+                });
+                
+                trades.forEach(trade => {
+                    try {
+                        // Calculate trade duration in minutes
+                        const entryDate = new Date(trade.entry_date + ' ' + (trade.entry_time || '00:00'));
+                        const exitDate = new Date(trade.exit_date + ' ' + (trade.exit_time || '00:00'));
+                        const durationMinutes = (exitDate - entryDate) / (1000 * 60);
+                        
+                        const pnl = calculateNetPnl(trade);
+                        
+                        // Find the appropriate bucket
+                        const bucket = durationBuckets.find(b => 
+                            durationMinutes >= b.min && durationMinutes < b.max
+                        );
+                        
+                        if (bucket) {
+                            const bucketData = bucketMap.get(bucket.name);
+                            bucketData.totalPnl += pnl;
+                            bucketData.totalTrades += 1;
+                            
+                            if (pnl > 0) bucketData.winningTrades += 1;
+                            else if (pnl < 0) bucketData.losingTrades += 1;
+                        }
+                    } catch (dateError) {
+                        console.warn('Error processing trade duration:', trade.id, dateError);
+                    }
+                });
+                
+                // Calculate metrics for each bucket
+                return durationBuckets.map(bucket => {
+                    const data = bucketMap.get(bucket.name);
+                    const winRate = data.totalTrades > 0 ? (data.winningTrades / data.totalTrades) * 100 : 0;
+                    const avgPnl = data.totalTrades > 0 ? data.totalPnl / data.totalTrades : 0;
+                    
+                    return {
+                        duration: bucket.name,
+                        totalPnl: data.totalPnl,
+                        winRate: winRate,
+                        avgPnl: avgPnl,
+                        totalTrades: data.totalTrades
+                    };
+                });
+            } catch (error) {
+                console.warn('Error calculating Trade Duration:', error);
                 return [];
             }
         };
@@ -8358,6 +8446,9 @@
                 // Render Detailed Performance by Day of the Week
                 renderDayPerformance(closed);
 
+                // Render Trade Duration Analysis
+                renderTradeDuration(closed);
+
             } catch (e) {
                 console.error('renderAdvancedMetrics error', e);
             }
@@ -8510,6 +8601,69 @@
                 }
             } catch (error) {
                 console.error('renderDayPerformance error', error);
+            }
+        };
+
+        // Render Trade Duration Analysis
+        const renderTradeDuration = (trades) => {
+            try {
+                const durationData = calculateTradeDuration(trades);
+                const tableElement = document.getElementById('trade-duration-table');
+                
+                if (tableElement) {
+                    const formatCurrency = (value) => {
+                        if (value === 0) return '-';
+                        const sign = value >= 0 ? '+' : '';
+                        return `${sign}₹${Math.abs(value).toFixed(0)}`;
+                    };
+                    
+                    const formatPercentage = (value) => {
+                        return value > 0 ? `${value.toFixed(0)}%` : '-';
+                    };
+                    
+                    const formatAvgPnl = (value) => {
+                        if (value === 0) return '-';
+                        const sign = value >= 0 ? '' : '-';
+                        return `${sign}₹${Math.abs(value).toFixed(0)}`;
+                    };
+                    
+                    tableElement.innerHTML = `
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b" style="border-color: var(--border-color);">
+                                    <th class="text-left py-2 px-3" style="color: var(--text-secondary);">Duration Range</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total P&L</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Win Rate (%)</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Total Trades</th>
+                                    <th class="text-center py-2 px-3" style="color: var(--text-secondary);">Avg. P&L per Trade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${durationData.map(item => `
+                                    <tr class="border-b" style="border-color: var(--border-color);">
+                                        <td class="py-2 px-3" style="color: var(--text-primary);">${item.duration}</td>
+                                        <td class="py-2 px-3 text-center" style="color: ${item.totalPnl >= 0 ? '#10b981' : '#ef4444'};">
+                                            ${formatCurrency(item.totalPnl)}
+                                        </td>
+                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                            ${formatPercentage(item.winRate)}
+                                        </td>
+                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                            ${item.totalTrades > 0 ? item.totalTrades : '-'}
+                                        </td>
+                                        <td class="py-2 px-3 text-center" style="color: var(--text-primary);">
+                                            ${formatAvgPnl(item.avgPnl)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    console.warn('Trade Duration table container not found');
+                }
+            } catch (error) {
+                console.error('renderTradeDuration error', error);
             }
         };
 
